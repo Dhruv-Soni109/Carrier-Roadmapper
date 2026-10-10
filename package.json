@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
- "scripts": {
-  "build": "vite build",
-  "start": "node server/src/index.js"
-}
+  "scripts": {
+    "build": "vite build",
+    "start": "node server/src/index.js"
+  },
   "dependencies": {
     "@types/dagre": "^0.7.54",
     "autoprefixer": "^10.6.1",
