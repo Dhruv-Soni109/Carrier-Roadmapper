@@ -6,6 +6,7 @@ PathForge is an AI-powered career planning platform that helps users work backwa
 
 - **Project Name:** PathForge
 - **Category:** Generative AI + Interactive Visualization
+- **live demo:** PathForge(https://ubiquitous-malasada-5851cb.netlify.app/).
 - **GitHub Repository:** [https://github.com/Dhruv-Soni109/Carrier-Roadmapper](https://github.com/Dhruv-Soni109/Carrier-Roadmapper)
 
 ---
