@@ -43,11 +43,11 @@ export const DashboardLayout = () => {
       <Sidebar />
 
       {/* Main Content Area */}
-      <main id="dashboard-content" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-w-7xl mx-auto w-full pb-20 md:pb-8">
+      <main id="dashboard-content" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto max-w-7xl 2xl:max-w-[1600px] mx-auto w-full pb-20 md:pb-8">
         {activeTab === 'overview' && <OverviewTab />}
         {activeTab === 'roadmap' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-extrabold text-white tracking-tight">
                   Interactive Career Skill Tree
@@ -55,6 +55,34 @@ export const DashboardLayout = () => {
                 <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                   Hierarchical DAG graph layout. Click any node to explore curriculum, resources & 6 interview questions.
                 </p>
+              </div>
+
+              {/* Legend Badges */}
+              <div className="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] shadow-sm">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
+                  <span>Skills</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                  <span>Projects</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
+                  <span>Certs</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)]"></span>
+                  <span>Roles</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]"></span>
+                  <span>Milestones</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                  <span className="font-semibold text-yellow-300">Dream Job</span>
+                </div>
               </div>
             </div>
             <SkillTreeCanvas />

@@ -1,7 +1,7 @@
 import dagre from 'dagre';
 
-const nodeWidth = 260;
-const nodeHeight = 110;
+const nodeWidth = 280;
+const nodeHeight = 135;
 
 /**
  * Calculates Dagre hierarchical layout for ReactFlow nodes and edges
@@ -16,16 +16,16 @@ export const getLayoutedElements = (nodes, edges, direction = 'LR') => {
   const isHorizontal = direction === 'LR';
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 45,
-    ranksep: 90,
-    marginx: 40,
-    marginy: 40
+    nodesep: isHorizontal ? 65 : 55,
+    ranksep: isHorizontal ? 130 : 100,
+    marginx: 60,
+    marginy: 60
   });
 
   nodes.forEach((node) => {
-    // Target nodes are slightly wider
-    const width = node.data?.isTarget ? 290 : nodeWidth;
-    const height = node.data?.isTarget ? 130 : nodeHeight;
+    // Target nodes are wider and taller
+    const width = node.data?.isTarget ? 320 : nodeWidth;
+    const height = node.data?.isTarget ? 150 : nodeHeight;
     dagreGraph.setNode(node.id, { width, height });
   });
 
@@ -37,8 +37,8 @@ export const getLayoutedElements = (nodes, edges, direction = 'LR') => {
 
   const layoutedNodes = nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
-    const width = node.data?.isTarget ? 290 : nodeWidth;
-    const height = node.data?.isTarget ? 130 : nodeHeight;
+    const width = node.data?.isTarget ? 320 : nodeWidth;
+    const height = node.data?.isTarget ? 150 : nodeHeight;
 
     return {
       ...node,
@@ -53,3 +53,4 @@ export const getLayoutedElements = (nodes, edges, direction = 'LR') => {
 
   return { nodes: layoutedNodes, edges };
 };
+

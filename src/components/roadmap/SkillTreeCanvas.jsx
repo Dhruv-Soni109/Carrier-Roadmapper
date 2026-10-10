@@ -1,5 +1,7 @@
 import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
+  ReactFlowProvider,
+  useReactFlow,
   Controls,
   MiniMap,
   Background,
@@ -10,13 +12,25 @@ import ReactFlow, {
 import { CustomNode } from './CustomNode';
 import { getLayoutedElements } from '../../utils/graphLayout';
 import { useRoadmap } from '../../context/RoadmapContext';
-import { Maximize2, Filter, Sparkles, CheckCircle2, Lock, Eye } from 'lucide-react';
+import {
+  Filter,
+  Sparkles,
+  Maximize2,
+  Compass,
+  ArrowRight,
+  ArrowDown,
+  ZoomIn,
+  ZoomOut,
+  MapPin,
+  Map,
+  RotateCcw
+} from 'lucide-react';
 
 const nodeTypes = {
   custom: CustomNode,
 };
 
-export const SkillTreeCanvas = () => {
+const SkillTreeInner = () => {
   const {
     currentRoadmap,
     completedNodes,
@@ -28,9 +42,13 @@ export const SkillTreeCanvas = () => {
     theme
   } = useRoadmap();
 
+  const { setCenter, fitView, zoomIn, zoomOut, getNodes } = useReactFlow();
+
   const [filterPhase, setFilterPhase] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [direction, setDirection] = useState('LR'); // 'LR' or 'TB'
   const [showMinimap, setShowMinimap] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(88);
 
   // Build raw nodes
   const rawNodes = useMemo(() => {
@@ -85,10 +103,11 @@ export const SkillTreeCanvas = () => {
 
         return {
           ...edge,
+          type: 'smoothstep',
           animated: edge.animated || isTargetAvailable,
           style: {
             stroke: strokeColor,
-            strokeWidth: isHighlighted ? 3 : 2,
+            strokeWidth: isHighlighted ? 3.5 : 2,
             opacity: sourceCompleted || isTargetAvailable || isHighlighted ? 1 : 0.45,
           },
           markerEnd: {
@@ -104,72 +123,142 @@ export const SkillTreeCanvas = () => {
   // Apply Dagre auto-layout
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
     if (rawNodes.length === 0) return { nodes: [], edges: [] };
-    return getLayoutedElements(rawNodes, rawEdges, 'LR');
-  }, [rawNodes, rawEdges]);
+    return getLayoutedElements(rawNodes, rawEdges, direction);
+  }, [rawNodes, rawEdges, direction]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  // Focus helper to center the camera on a specific list of nodes at comfortable readable zoom (0.88x)
+  const focusNodes = useCallback((targetNodeList, zoomLevel = 0.88) => {
+    if (!targetNodeList || targetNodeList.length === 0) return;
+    const avgX = targetNodeList.reduce((acc, n) => acc + (n.position?.x || 0) + 140, 0) / targetNodeList.length;
+    const avgY = targetNodeList.reduce((acc, n) => acc + (n.position?.y || 0) + 68, 0) / targetNodeList.length;
+    setCenter(avgX, avgY, { zoom: zoomLevel, duration: 500 });
+  }, [setCenter]);
+
+  // When layouted nodes update, position camera at readable zoom focusing on initial nodes
   useEffect(() => {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
+
+    if (layoutedNodes.length > 0) {
+      const timer = setTimeout(() => {
+        let targetList = [];
+        if (filterPhase === 'all') {
+          // In All Phases view, focus directly on Phase 1 nodes so they are immediately large & readable
+          const p1 = layoutedNodes.filter(n => n.data?.phase === 1);
+          targetList = p1.length > 0 ? p1 : [layoutedNodes[0]];
+        } else {
+          targetList = layoutedNodes.filter(n => n.data?.phase === Number(filterPhase));
+        }
+
+        if (!targetList.length) targetList = layoutedNodes;
+        focusNodes(targetList, 0.88);
+      }, 70);
+
+      return () => clearTimeout(timer);
+    }
+  }, [layoutedNodes, layoutedEdges, setNodes, setEdges, filterPhase, focusNodes]);
 
   const onNodeClick = useCallback((_, node) => {
     setActiveNodeId(node.id);
-  }, [setActiveNodeId]);
+    setCenter(node.position.x + 140, node.position.y + 68, { zoom: 0.95, duration: 400 });
+  }, [setActiveNodeId, setCenter]);
+
+  // Action: Focus on readable start
+  const handleFocusStart = () => {
+    const currentNodes = getNodes();
+    const p1 = currentNodes.filter(n => n.data?.phase === 1);
+    focusNodes(p1.length > 0 ? p1 : currentNodes, 0.88);
+  };
+
+  // Action: Fit all overview
+  const handleFitAll = () => {
+    fitView({ padding: 0.15, duration: 600 });
+  };
 
   return (
-    <div className="relative w-full h-[700px] lg:h-[780px] rounded-2xl overflow-hidden border border-slate-800/80 bg-[#080c16]/90 shadow-2xl">
-      {/* Top Filter & Legend Bar */}
+    <div className="relative w-full h-[720px] lg:h-[800px] rounded-2xl overflow-hidden border border-slate-800/80 bg-[#080c16]/95 shadow-2xl">
+      {/* Top Filter & Controls Bar */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Phase Filter Buttons */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 pointer-events-auto shadow-lg">
-          <span className="hidden sm:inline-flex items-center gap-1 pl-2 pr-1 text-[11px] font-semibold text-slate-400">
-            <Filter className="w-3 h-3 text-cyan-400" />
-            <span>Phase:</span>
-          </span>
-          {['all', '1', '2', '3', '4', '5'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setFilterPhase(p)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                filterPhase === p
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              {p === 'all' ? 'All Phases' : `P${p}`}
-            </button>
-          ))}
+        {/* Left Side: Phase Filter & Direction Toggle */}
+        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+          {/* Phase Filter Buttons */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 shadow-lg">
+            <span className="hidden sm:inline-flex items-center gap-1 pl-2 pr-1 text-[11px] font-semibold text-slate-400">
+              <Filter className="w-3 h-3 text-cyan-400" />
+              <span>Phase:</span>
+            </span>
+            {['all', '1', '2', '3', '4', '5'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setFilterPhase(p)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  filterPhase === p
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                {p === 'all' ? 'All Phases' : `P${p}`}
+              </button>
+            ))}
+          </div>
+
+          {/* Layout Direction Toggle (LR vs TB) */}
+          <button
+            onClick={() => setDirection(d => d === 'LR' ? 'TB' : 'LR')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-700 shadow-lg transition-all"
+            title="Toggle layout direction between Horizontal and Vertical"
+          >
+            {direction === 'LR' ? (
+              <>
+                <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Horizontal</span>
+              </>
+            ) : (
+              <>
+                <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Vertical</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Legend Pills */}
-        <div className="hidden xl:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 pointer-events-auto text-[11px] shadow-lg">
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span>
-            <span>Skills</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-            <span>Projects</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span>
-            <span>Certs</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.6)]"></span>
-            <span>Roles</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]"></span>
-            <span>Milestones</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
-            <span className="font-semibold text-yellow-300">Target Role</span>
-          </div>
+        {/* Right Side: Camera Presets & Zoom Helpers */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Focus Start Button */}
+          <button
+            onClick={handleFocusStart}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-500/40 shadow-lg transition-all"
+            title="Focus camera on Phase 1 at 100% readable zoom"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Focus (Readable)</span>
+          </button>
+
+          {/* Overview (Fit All) Button */}
+          <button
+            onClick={handleFitAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-700 shadow-lg transition-all"
+            title="Zoom out to see the entire career roadmap overview"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Fit All</span>
+          </button>
+
+          {/* Minimap Toggle */}
+          <button
+            onClick={() => setShowMinimap(!showMinimap)}
+            className={`p-1.5 rounded-xl backdrop-blur-xl border shadow-lg transition-all ${
+              showMinimap
+                ? 'bg-slate-800 text-cyan-400 border-slate-700'
+                : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white'
+            }`}
+            title={showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+          >
+            <Map className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -180,22 +269,24 @@ export const SkillTreeCanvas = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onMove={(_, viewport) => setCurrentZoom(Math.round(viewport.zoom * 100))}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
-        minZoom={0.2}
-        maxZoom={1.5}
+        minZoom={0.25}
+        maxZoom={1.6}
+        defaultViewport={{ x: 80, y: 160, zoom: 0.88 }}
         className="touch-none"
       >
         <Background
           color={theme === 'dark' ? '#1e293b' : '#cbd5e1'}
-          gap={24}
+          gap={28}
           size={1.5}
         />
+
         <Controls
           showInteractive={false}
           className="!bottom-4 !left-4"
         />
+
         {showMinimap && (
           <MiniMap
             nodeColor={(n) => {
@@ -211,17 +302,35 @@ export const SkillTreeCanvas = () => {
               }
             }}
             nodeStrokeWidth={3}
-            maskColor="rgba(8, 12, 22, 0.75)"
-            className="!bottom-4 !right-4 !w-36 !h-28"
+            maskColor="rgba(8, 12, 22, 0.8)"
+            className="!bottom-4 !right-4 !w-40 !h-32 rounded-xl border border-slate-800"
           />
         )}
       </ReactFlow>
 
-      {/* Floating Instructions Helper */}
-      <div className="absolute bottom-4 left-20 z-10 hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400 pointer-events-none">
-        <Sparkles className="w-3 h-3 text-cyan-400" />
-        <span>Click any node to view curriculum, projects & 6 interview questions</span>
+      {/* Floating Bottom Bar: Quick Zoom & Hint */}
+      <div className="absolute bottom-4 left-24 z-10 flex items-center gap-3 pointer-events-none">
+        {/* Zoom Indicator */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-[11px] font-bold text-slate-300 shadow-lg pointer-events-auto">
+          <span className="text-cyan-400">Zoom:</span>
+          <span>{currentZoom}%</span>
+        </div>
+
+        {/* Floating Instruction */}
+        <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400 shadow-lg pointer-events-none">
+          <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
+          <span>Click any node to explore curriculum, projects & 6 interview questions</span>
+        </div>
       </div>
     </div>
   );
 };
+
+export const SkillTreeCanvas = () => {
+  return (
+    <ReactFlowProvider>
+      <SkillTreeInner />
+    </ReactFlowProvider>
+  );
+};
+
