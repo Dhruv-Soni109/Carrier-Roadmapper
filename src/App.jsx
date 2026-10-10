@@ -6,6 +6,7 @@ import { DashboardLayout } from './components/dashboard/DashboardLayout';
 import { RoadmapModal } from './components/generator/RoadmapModal';
 import { ExportModal } from './components/export/ExportModal';
 import { ToastContainer } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const AppContent = () => {
   const { viewMode } = useRoadmap();
@@ -33,8 +34,10 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <RoadmapProvider>
-      <AppContent />
-    </RoadmapProvider>
+    <ErrorBoundary>
+      <RoadmapProvider>
+        <AppContent />
+      </RoadmapProvider>
+    </ErrorBoundary>
   );
 }

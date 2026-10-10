@@ -85,6 +85,19 @@ export const RoadmapModal = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState(null);
 
+  // Auto-finish as soon as generatedResult arrives (declared unconditionally before any return)
+  useEffect(() => {
+    if (generatedResult && isGenerating) {
+      const timer = setTimeout(() => {
+        loadRoadmap(generatedResult);
+        setIsGenerating(false);
+        setIsGeneratorOpen(false);
+        setGeneratedResult(null);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [generatedResult, isGenerating, loadRoadmap, setIsGeneratorOpen]);
+
   if (!isGeneratorOpen) return null;
 
   const handlePresetSelect = (preset) => {
@@ -116,19 +129,6 @@ export const RoadmapModal = () => {
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
-
-  // Auto-finish as soon as generatedResult arrives
-  useEffect(() => {
-    if (generatedResult && isGenerating) {
-      const timer = setTimeout(() => {
-        loadRoadmap(generatedResult);
-        setIsGenerating(false);
-        setIsGeneratorOpen(false);
-        setGeneratedResult(null);
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [generatedResult, isGenerating, loadRoadmap, setIsGeneratorOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
