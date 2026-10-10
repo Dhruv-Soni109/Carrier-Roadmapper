@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "label": "Start Frontend (Vite)",
+      "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "server",
+      "isBackground": true,
+      "label": "Start Backend (Express)",
+      "problemMatcher": []
+    }
+  ]
+}
