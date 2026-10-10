@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -117,14 +117,32 @@ export const RoadmapModal = () => {
     return Object.keys(errs).length === 0;
   };
 
+  // Auto-finish as soon as generatedResult arrives
+  useEffect(() => {
+    if (generatedResult && isGenerating) {
+      const timer = setTimeout(() => {
+        loadRoadmap(generatedResult);
+        setIsGenerating(false);
+        setIsGeneratorOpen(false);
+        setGeneratedResult(null);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [generatedResult, isGenerating, loadRoadmap, setIsGeneratorOpen]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsGenerating(true);
+    setGeneratedResult(null);
     try {
       const result = await roadmapService.generateRoadmap(formData);
-      setGeneratedResult(result.roadmap);
+      if (result && result.roadmap) {
+        setGeneratedResult(result.roadmap);
+      } else {
+        throw new Error('No roadmap data returned.');
+      }
     } catch (err) {
       console.error(err);
       setIsGenerating(false);
@@ -137,6 +155,7 @@ export const RoadmapModal = () => {
       loadRoadmap(generatedResult);
       setIsGenerating(false);
       setIsGeneratorOpen(false);
+      setGeneratedResult(null);
     }
   };
 
@@ -159,7 +178,10 @@ export const RoadmapModal = () => {
         className="relative w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 my-8"
       >
         {isGenerating ? (
-          <GeneratingState onComplete={handleGenerationFinish} />
+          <GeneratingState
+            onComplete={handleGenerationFinish}
+            isReady={Boolean(generatedResult)}
+          />
         ) : (
           <div>
             {/* Modal Header */}

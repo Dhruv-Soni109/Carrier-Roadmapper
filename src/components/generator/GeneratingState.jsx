@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Compass, Cpu, CheckCircle2, ShieldCheck, Database, Layers } from 'lucide-react';
+import { Compass, Cpu, CheckCircle2, ShieldCheck, Database, Layers } from 'lucide-react';
 
 const GENERATION_STEPS = [
   { icon: Compass, text: 'Analyzing target role trajectory & industry benchmarks...' },
@@ -11,12 +11,17 @@ const GENERATION_STEPS = [
   { icon: CheckCircle2, text: 'Personalized career roadmap ready!' }
 ];
 
-export const GeneratingState = ({ onComplete }) => {
+export const GeneratingState = ({ onComplete, isReady = false }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentStepIndex((prev) => {
+        // If we reach the step before last and AI is still computing, wait there
+        if (prev === GENERATION_STEPS.length - 2 && !isReady) {
+          return prev;
+        }
+
         if (prev < GENERATION_STEPS.length - 1) {
           return prev + 1;
         } else {
@@ -27,10 +32,21 @@ export const GeneratingState = ({ onComplete }) => {
           return prev;
         }
       });
-    }, 700);
+    }, 600);
 
     return () => clearInterval(interval);
-  }, [onComplete]);
+  }, [onComplete, isReady]);
+
+  // If AI data arrives while we are waiting at step 4, immediately transition to step 5 (100%) and complete
+  useEffect(() => {
+    if (isReady && currentStepIndex >= GENERATION_STEPS.length - 2) {
+      setCurrentStepIndex(GENERATION_STEPS.length - 1);
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [isReady, currentStepIndex, onComplete]);
 
   const step = GENERATION_STEPS[currentStepIndex];
   const StepIcon = step.icon;
