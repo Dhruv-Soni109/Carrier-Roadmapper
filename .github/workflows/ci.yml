@@ -1,0 +1,75 @@
+name: PathForge CI / CD — Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 Install root dependencies
+        run: npm install
+
+      - name: 📦 Install backend server dependencies
+        run: npm --prefix server install
+
+      - name: 🧪 Run backend unit & integration tests
+        env:
+          PORT: 8080
+          NODE_ENV: test
+          MOCK_AI: 'true'
+        run: npm test
+
+      - name: 🏗️ Build frontend production bundle (Vite)
+        run: npm run build
+
+      - name: 🔍 Verify built assets
+        run: |
+          test -f dist/index.html || { echo "dist/index.html missing"; exit 1; }
+          ls -la dist/assets
+
+      - name: 🩺 Server Smoke Test (Express + Built Frontend)
+        env:
+          PORT: 8080
+          NODE_ENV: production
+          MOCK_AI: 'true'
+        run: |
+          node -e "
+            import('./server/src/app.js').then(({ createApp }) => {
+              const app = createApp();
+              const server = app.listen(8080, () => {
+                console.log('Smoke test: Server successfully started and mounted static assets.');
+                server.close(() => process.exit(0));
+              });
+            }).catch(err => {
+              console.error('Server smoke test failed:', err);
+              process.exit(1);
+            });
+          "
+
+      - name: 🚀 Upload production build artifact
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pathforge-dist
+          path: dist/
+          retention-days: 7

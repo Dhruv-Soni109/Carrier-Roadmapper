@@ -35,3 +35,8 @@ server/.env.*
 *.njsproj
 *.sln
 *.sw?
+
+# Archives
+*.zip
+*.tar.gz
+

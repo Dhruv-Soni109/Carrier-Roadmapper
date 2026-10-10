@@ -1,18 +1,35 @@
 {
-  "name": "antigravity",
+  "name": "pathforge",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "PathForge — AI-Powered Reverse-Engineered Career Roadmap Generator",
   "type": "module",
   "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node server/src/index.js",
+    "dev:frontend": "vite",
+    "dev:server": "npm --prefix server run dev",
     "build": "vite build",
-    "start": "node server/src/index.js"
+    "postinstall": "npm --prefix server install",
+    "test": "npm --prefix server test",
+    "test:watch": "npm --prefix server run test:watch",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "zip": "powershell -ExecutionPolicy Bypass -File ./scripts/create-zip.ps1"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^2.28.0",
     "@types/dagre": "^0.7.54",
     "autoprefixer": "^10.6.1",
     "canvas-confetti": "^1.9.4",
+    "cors": "^2.8.5",
     "dagre": "^0.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
     "framer-motion": "^14.1.0",
+    "helmet": "^8.0.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^1.55.0",
     "lz-string": "^1.5.0",
@@ -21,7 +38,8 @@
     "react-dom": "^18.3.1",
     "reactflow": "^11.11.4",
     "recharts": "^3.10.1",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

@@ -61,11 +61,18 @@ export const createApp = () => {
   // 5. Rate Limiter
   app.use(apiRateLimiter);
 
-  // 6. Mount Primary API Routes
+  // 6. Mount Primary API Routes (supports both /api prefix and stripped path rewrites)
   app.use('/api/health', healthRoutes);
+  app.use('/health', healthRoutes);
+
   app.use('/api/roadmap', roadmapRoutes);
+  app.use('/roadmap', roadmapRoutes);
+
   app.use('/api/node', nodeRoutes);
+  app.use('/node', nodeRoutes);
+
   app.use('/api/replan', replanRoutes);
+  app.use('/replan', replanRoutes);
 
   // 7. Serve Built Frontend (Combined Single-Port Deployment)
   const distPath = path.resolve(__dirname, '../../dist');
